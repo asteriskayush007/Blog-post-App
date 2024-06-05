@@ -1,10 +1,13 @@
 const express = require('express');
 const app = express();
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const path = require('path');
 const userModel = require('./models/user');
 const postModel = require('./models/post')
 const cookieParser = require('cookie-parser');
+const multer  = require('multer');
 const { posts } = require('moongose/models');
 
 app.set("view engine", "ejs");
@@ -12,8 +15,32 @@ app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
 
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, './public/images/uploads')
+    },
+    filename: function (req, file, cb) {
+      crypto.randomBytes(12 , function(err, bytes){
+        const fn = bytes.toString("hex") + path.extname(file.originalname);
+          cb(null, fn);
+        
+      })
+    }
+  })
+  
+  const upload = multer({ storage: storage })
+
 app.get('/',function(req,res){
     res.render('index');
+})
+
+app.get('/file',function(req,res){
+    res.render('file');
+})
+
+app.post('/upload', upload.single('file'),function(req,res){
+    console.log(req.file);
+    res.render('upload');
 })
 
 app.get('/login',function(req,res){
@@ -103,6 +130,7 @@ app.post('/update/:id', isLoggedIn , async function(req,res){
 
 
 
+
 app.post('/post', isLoggedIn , async function(req,res){
     let user = await userModel.findOne({email: req.user.email});
     // console.log(user)
@@ -115,6 +143,8 @@ app.post('/post', isLoggedIn , async function(req,res){
     await user.save();
     res.redirect("/profile")
 })
+
+
 
 
 
